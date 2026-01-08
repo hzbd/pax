@@ -21,6 +21,10 @@ Pax is a lightweight Rust tool designed to **replace manual SSH SOCKS5 commands*
 *   **Metadata Display**: Shows server **Region** and **Source Ref** for better tracking.
 
 ![State](./screenshot.png)
+**Display under normal conditions.**
+
+![State with datetime exp notify](./screenshot_notify.png)
+**A prominent reminder appears on startup when authentication is about to expire.**
 
 ## Usage
 
