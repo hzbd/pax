@@ -111,7 +111,15 @@ pub fn start_ssh_process(local_port: u16, config: &SshConfig) -> Result<()> {
 }
 
 /// Helper: Checks if the spawned process is still running
+/// Handles platform differences in expectrl's API.
+#[cfg(unix)]
 fn is_process_alive(p: &mut Session) -> bool {
-    // Fixed: Using get_process_mut() and is_alive()
+    // Unix: returns Result<bool>
     p.get_process_mut().is_alive().unwrap_or(false)
+}
+
+#[cfg(windows)]
+fn is_process_alive(p: &mut Session) -> bool {
+    // Windows: returns bool
+    p.get_process_mut().is_alive()
 }

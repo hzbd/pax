@@ -15,7 +15,7 @@ pub struct AppArgs {
     // --- Mode 1: API Configuration ---
 
     /// API endpoint URL (Used if --host is not provided)
-    #[arg(long, env = "PAX_API_URL", default_value = "https://example-mock.com/api/auth/")]
+    #[arg(long, env = "PAX_API_URL", default_value = "https://example.com/api/auth.json")]
     pub api: String,
 
     /// Request timeout in seconds (for API fetch)
