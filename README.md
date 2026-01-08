@@ -73,7 +73,7 @@ Recommended for single servers or replacing `ssh -D`.
 
 | Flag | Env Var | Description |
 | :--- | :--- | :--- |
-| `--api` | `PAX_API_URL` | Remote API URL (Default: `https://example-mock.com/api/auth/`). |
+| `--api` | `PAX_API_URL` | Remote API URL (Default: `https://example.com/api/auth.json`). |
 | `--host` | - | Remote Server IP/Host (Triggers CLI Mode). |
 | `--user` | - | Remote SSH User (Default: `root` in CLI Mode). |
 | `--ssh-port` | - | Remote SSH Port (Default: `22`). |
@@ -140,4 +140,3 @@ The `private_key` field supports **Raw Key Content** (PEM format) OR a **File Pa
 
 ## License
 MIT
-
