@@ -86,12 +86,14 @@ async fn run_session(args: &config::AppArgs) -> anyhow::Result<()> {
     }
 
     let port = args.local_port;
+    let host = args.local_host.clone();
     let cfg_clone = ssh_cfg.clone();
 
     // 5. Run SSH with Signal Handling
     tokio::select! {
         res = tokio::task::spawn_blocking(move || {
-            runner::start_ssh_process(port, &cfg_clone)
+            runner::start_ssh_process(&host, port, &cfg_clone)
+
         }) => {
             match res {
                 Ok(inner) => inner,

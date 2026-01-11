@@ -5,10 +5,11 @@ use std::process::Command;
 use tracing::{info, warn, debug};
 
 /// Starts the SSH process using `expectrl`.
-pub fn start_ssh_process(local_port: u16, config: &SshConfig) -> Result<()> {
+pub fn start_ssh_process(local_host: &str, local_port: u16, config: &SshConfig) -> Result<()> {
     let mut cmd = Command::new("ssh");
+    let bind_addr = format!("{}:{}", local_host, local_port);
 
-    cmd.arg("-D").arg(local_port.to_string())
+    cmd.arg("-D").arg(&bind_addr)
        .arg("-N") // No remote command (forwarding only)
        .arg("-C") // Compression
        .arg("-v") // Verbose (helps debugging, but we rely on process state)
@@ -85,7 +86,7 @@ pub fn start_ssh_process(local_port: u16, config: &SshConfig) -> Result<()> {
                 // The expect timed out. This means SSH is silent.
                 // If the process is still running, it means the connection is likely established.
                 if is_process_alive(&mut p) {
-                    info!("Tunnel established (Silent Mode). SOCKS5: 127.0.0.1:{}", local_port);
+                    info!("Tunnel established (Silent Mode). SOCKS5: {}", bind_addr);
                     break; // Exit the interaction loop, move to monitoring
                 } else {
                     return Err(anyhow!("SSH process died unexpectedly during initialization."));

@@ -44,7 +44,8 @@ pub struct AppArgs {
     #[arg(short = 'k', long)]
     pub private_key: Option<String>,
 
-    // --- Common Settings ---
+    #[arg(long, default_value = "127.0.0.1")]
+    pub local_host: String,
 
     /// Local SOCKS5 port
     #[arg(short, long, default_value = "1080")]
