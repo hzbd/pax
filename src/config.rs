@@ -106,9 +106,10 @@ pub fn print_node_info(config: &SshConfig) {
     if let Some(ref r) = config.ref_info {
         println!("{} {}", "  -> Ref :".bold(), r.blue().underline());
     }
-    println!();
+    // println!();
 
     check_expiration(&config.exp_at);
+    println!();
 }
 
 /// Creates SshConfig directly from CLI arguments.
@@ -237,7 +238,7 @@ fn check_expiration(exp_at: &Option<String>) {
                 println!("\n{}", "==========================================".yellow());
                 println!("{} {}", "!!! WARNING: EXPIRING SOON !!!".red().bold(), "(< 24h)".yellow());
                 println!("Remaining: {} hours (Until: {})", hours_left.to_string().red().bold(), date_str);
-                println!("{}", "==========================================\n".yellow());
+                println!("{}", "==========================================".yellow());
             } else {
                 println!("  -> Valid until: {}", date_str.green());
             }

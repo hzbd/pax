@@ -21,6 +21,16 @@ async fn main() {
 
     let args = config::AppArgs::parse();
 
+    // Global asynchronous Ctrl+C listener.
+    // Instantly exits the process upon receiving the signal, whether the main thread
+    // is blocked fetching config, running SSH, or sleeping before reconnecting.
+    tokio::spawn(async {
+        if let Ok(_) = signal::ctrl_c().await {
+            info!("Received Ctrl+C, exiting immediately.");
+            std::process::exit(0);
+        }
+    });
+
     info!("Starting Pax - SSH SOCKS5 Proxy");
 
     // Check mode for initial log
@@ -33,12 +43,8 @@ async fn main() {
     loop {
         if let Err(e) = run_session(&args).await {
             error!("Session ended: {:?}", e);
-
-            // Critical Fix: If interrupted by user (Ctrl+C), exit the process immediately.
-            if e.to_string().contains("Interrupted by user") {
-                info!("Exiting immediately.");
-                std::process::exit(0);
-            }
+            // Removed the previous 'Interrupted by user' check;
+            // process termination is now handled by the global task above.
         }
 
         info!("Reconnecting in 5 seconds...");
@@ -77,6 +83,7 @@ async fn run_session(args: &config::AppArgs) -> anyhow::Result<()> {
         if let Some(ref raw_key) = ssh_cfg.private_key {
             let (final_path, guard) = config::prepare_private_key(raw_key)?;
             ssh_cfg.private_key = Some(final_path);
+            // Ensure the temporary file stays alive until run_session ends
             _key_guard = guard;
         } else {
             return Err(anyhow::anyhow!("AuthType is Key but no key provided."));
@@ -89,20 +96,13 @@ async fn run_session(args: &config::AppArgs) -> anyhow::Result<()> {
     let host = args.local_host.clone();
     let cfg_clone = ssh_cfg.clone();
 
-    // 5. Run SSH with Signal Handling
-    tokio::select! {
-        res = tokio::task::spawn_blocking(move || {
-            runner::start_ssh_process(&host, port, &cfg_clone)
+    // 5. Run SSH (Removed tokio::select! Ctrl+C interception logic)
+    let res = tokio::task::spawn_blocking(move || {
+        runner::start_ssh_process(&host, port, &cfg_clone)
+    }).await;
 
-        }) => {
-            match res {
-                Ok(inner) => inner,
-                Err(e) => Err(anyhow::anyhow!("Join error: {}", e)),
-            }
-        }
-        _ = signal::ctrl_c() => {
-            info!("Received Ctrl+C, cleaning up...");
-            Err(anyhow::anyhow!("Interrupted by user"))
-        }
+    match res {
+        Ok(inner) => inner,
+        Err(e) => Err(anyhow::anyhow!("Join error: {}", e)),
     }
 }
