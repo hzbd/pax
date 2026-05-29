@@ -6,8 +6,8 @@ Pax is a lightweight Rust tool designed to **replace manual SSH SOCKS5 commands*
 
 | **Feature** | **Pax** |
 | :--- | :--- |
-| **Stability** | Detects disconnects (Timeout/EOF) and **auto-reconnects**. |
-| **Dynamic** | Fetches credentials from a JSON API (Auto-rotate). |
+| **Stability** | Detects disconnects (Timeout/EOF) and **auto-reconnects**. Gracefully handles `Ctrl+C` exits. |
+| **Dynamic** | Fetches credentials from a JSON API (Auto-rotate / List parsing). |
 | **Manual** | Can also act as a robust `autossh` alternative via CLI args. |
 | **Keys** | Handles **Local Keys** (`~/.ssh/...`) & **Raw Key Content**. |
 
@@ -84,46 +84,59 @@ Recommended for single servers or replacing `ssh -D`.
 
 ## API Response Format
 
-Pax expects the remote URL to return a single JSON object.
+Pax expects the remote URL to return a RESTful JSON wrapper containing a `data` array. If multiple nodes are returned, **Pax will safely select the first available node from the list**.
 
 ### Mode A: Password Authentication
 ```json
 {
-  "auth_type": "password",
-  "host": "1.1.1.1",
-  "port": "22",
-  "user": "root",
-  "password": "my_secret_password",
-  "region": "JP",
-  "ref": "https://abc.com/source-page",
-  "exp_at": "2026-01-16 02:45:03"
+  "msg": "Success",
+  "count": 1,
+  "data": [
+    {
+      "auth_type": "password",
+      "host": "1.1.1.1",
+      "port": "22",
+      "user": "root",
+      "password": "my_secret_password",
+      "region": "JP",
+      "ref": "https://abc.com/source-page",
+      "exp_at": "2026-01-16 02:45:03"
+    }
+  ]
 }
 ```
 
 ### Mode B: Private Key Authentication
-The `private_key` field supports **Raw Key Content** (PEM format) OR a **File Path**.
+The `private_key` field inside the node object supports **Raw Key Content** (PEM format) OR a **File Path**.
 
 ```json
 {
-  "auth_type": "key",
-  "host": "1.1.1.2",
-  "port": "22",
-  "user": "root",
-  // Option 1: Raw content of the private key
-  "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
-  // Option 2: Absolute path or path with ~
-  // "private_key": "~/.ssh/id_rsa",
+  "msg": "Success",
+  "count": 1,
+  "data": [
+    {
+      "auth_type": "key",
+      "host": "1.1.1.2",
+      "port": "22",
+      "user": "root",
+      
+      // Option 1: Raw content of the private key
+      "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+      // Option 2: Absolute path or path with ~
+      // "private_key": "~/.ssh/id_rsa",
 
-  // Optional: Passphrase if the key is encrypted
-  "password": "key_passphrase",
+      // Optional: Passphrase if the key is encrypted
+      "password": "key_passphrase",
 
-  "region": "US",
-  "ref": "https://abc.com/server-list",
-  "exp_at": "2026-01-23 02:46:09"
+      "region": "US",
+      "ref": "https://abc.com/server-list",
+      "exp_at": "2026-01-23 02:46:09"
+    }
+  ]
 }
 ```
 
-### Field Descriptions
+### Field Descriptions (Inside `data` objects)
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `auth_type` | `string` | `password` or `key`. |
@@ -139,4 +152,5 @@ The `private_key` field supports **Raw Key Content** (PEM format) OR a **File Pa
 *   **Runtime**: The `ssh` command must be available in your `$PATH`.
 
 ## License
+
 MIT
