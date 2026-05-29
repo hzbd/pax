@@ -82,6 +82,14 @@ pub struct SshConfig {
     pub exp_at: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct ApiResponse {
+    pub msg: Option<String>, 
+    pub count: Option<usize>,
+    pub data: Vec<SshConfig>,
+}
+
 fn default_port() -> String { "22".to_string() }
 fn default_auth_type() -> AuthType { AuthType::Password }
 
@@ -149,13 +157,33 @@ pub async fn fetch_ssh_config(api_url: &str, timeout_secs: u64) -> Result<SshCon
     let resp = client.get(api_url).send().await.context("API request failed")?;
     let text = resp.text().await.context("Failed to get response text")?;
 
-    let config: SshConfig = match serde_json::from_str(&text) {
-        Ok(c) => c,
+    // 1. Parse the outer wrapper structure: {"count": X, "data": [...]}
+    let api_response: ApiResponse = match serde_json::from_str(&text) {
+        Ok(resp) => resp,
         Err(e) => {
             tracing::error!("Failed to parse JSON. Raw response content:\n{}", text);
             return Err(anyhow::anyhow!("JSON parse error: {}", e));
         }
     };
+
+    if let Some(msg) = api_response.msg {
+        tracing::debug!("API Response Msg: {}", msg);
+    }
+    
+    let node_count = api_response.data.len();
+
+    // 2. Evaluate based on the number of nodes
+    if node_count == 0 {
+        return Err(anyhow::anyhow!("API returned empty data array, no nodes available."));
+    }
+
+    if node_count > 1 {
+        // If multiple nodes are returned, log an info message, but simply pick the first one
+        tracing::info!("API returned {} nodes, picking the first one.", node_count);
+    }
+
+    // 3. Extract the first node (since node_count > 0, unwrap is safe here)
+    let config = api_response.data.into_iter().next().unwrap();
 
     Ok(config)
 }
