@@ -2,6 +2,50 @@
 
 Pax is a lightweight Rust tool designed to **replace manual SSH SOCKS5 commands** (e.g., `ssh -D 1080 ...`). It can fetch credentials dynamically from a remote API **OR** take them directly from the command line, establishing the tunnel and keeping it alive automatically.
 
+```mermaid
+flowchart TD
+    %% Control Plane
+    subgraph Control ["Control Plane (Pax Core Engine)"]
+        direction TB
+        S1[/"Step 1: Configuration Resolution\n(Fetch JSON API or Read CLI Args)"/]
+        S2["Step 2: Credential Preparation\n(Hold passwords or write temp keys to disk)"]
+        S3{"Step 3: Spawn & Auto-Auth\n(Run 'ssh -D -N', auto-inject passwords via expectrl)"}
+        S5(("Step 5: Monitor & Self-Healing\n(Detect EOF/Crash, wait 5s and reconnect)"))
+
+        S1 --> S2 --> S3
+        S3 -. "Connection drops\n(Timeout / Refused)" .-> S5
+        S5 -. "Loop back to start" .-> S1
+    end
+
+    %% Data Plane
+    subgraph Data ["Data Plane (Traffic Forwarding)"]
+        direction LR
+        Apps("Client Apps\n(Browser / Telegram)")
+        SSHProcess["Step 4: Local OpenSSH Process\n(Listening on 127.0.0.1:1080)"]
+        Server["Remote SSH Server\n(Port 22)"]
+        Internet(("Public Internet"))
+
+        Apps -- "SOCKS5 Proxy" --> SSHProcess
+        SSHProcess == "Encrypted SSH Tunnel" ==> Server
+        Server -- "Forwarded Traffic" --> Internet
+    end
+
+    %% Tie Control and Data planes together
+    S3 == "Spawns process & \nmanages lifecycle" === SSHProcess
+
+    %% Styling
+    classDef step fill:#fff3e0,stroke:#ffb74d,stroke-width:2px,color:#000
+    classDef network fill:#e1f5fe,stroke:#4fc3f7,stroke-width:2px,color:#000
+    classDef external fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,color:#000
+    
+    class S1,S2,S3,S5 step
+    class SSHProcess,Server network
+    class Apps,Internet external
+    
+    %% Dashed border for Pax Core Engine
+    style Control fill:transparent,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+```
+
 ## Why use Pax?
 
 | **Feature** | **Pax** |
